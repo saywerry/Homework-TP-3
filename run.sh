@@ -1,56 +1,45 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
 set -e
 
-case "$1" in
-  build_generator)
-    docker build -t generator ./generator
-    ;;
+HOST_DIR="$(pwd -W 2>/dev/null || pwd)"
 
-  run_generator)
-    mkdir -p data
-    docker run --rm -v "$(pwd)/data:/data" generator
-    ;;
+if [ "$1" = "build_generator" ]; then
+  docker build -t generator ./generator
 
-  create_local_data)
-    mkdir -p local_data
-    python3 generator/src/generate.py local_data
-    ;;
+elif [ "$1" = "run_generator" ]; then
+  mkdir -p data
+  MSYS_NO_PATHCONV=1 docker run --rm -v "$HOST_DIR/data:/data" generator
 
-  build_reporter)
-    docker build -t reporter ./reporter
-    ;;
+elif [ "$1" = "create_local_data" ]; then
+  mkdir -p local_data
+  python generator/generate.py local_data
 
-  run_reporter)
-    mkdir -p data
-    docker run --rm -v "$(pwd)/data:/data" reporter
-    ;;
+elif [ "$1" = "build_reporter" ]; then
+  docker build -t reporter ./reporter
 
-  report_server)
-    docker run --rm -p 8080:80 -v "$(pwd)/data:/usr/share/nginx/html:ro" nginx:alpine
-    ;;
+elif [ "$1" = "run_reporter" ]; then
+  mkdir -p data
+  MSYS_NO_PATHCONV=1 docker run --rm -v "$HOST_DIR/data:/data" reporter
 
-  structure)
-    find . -not -path './.git/*' | sort | sed -e 's/[^-][^\/]*\//  /g' -e 's/^  //' -e 's/-/|/'
-    ;;
+elif [ "$1" = "structure" ]; then
+  find . -not -path './.git/*' | sort
 
-  clear_data)
-    rm -f data/*.csv data/*.html
-    echo "data/ очищена"
-    ;;
+elif [ "$1" = "clear_data" ]; then
+  rm -f data/*.csv
+  rm -f data/*.html
 
-  inside_generator)
-    mkdir -p data
-    docker run --rm -v "$(pwd)/data:/data" --entrypoint ls generator -la /data
-    ;;
+elif [ "$1" = "inside_generator" ]; then
+  mkdir -p data
+  MSYS_NO_PATHCONV=1 docker run --rm -v "$HOST_DIR/data:/data" --entrypoint ls generator -la /data
 
-  inside_reporter)
-    mkdir -p data
-    docker run --rm -v "$(pwd)/data:/data" --entrypoint ls reporter -la /data
-    ;;
+elif [ "$1" = "inside_reporter" ]; then
+  mkdir -p data
+  MSYS_NO_PATHCONV=1 docker run --rm -v "$HOST_DIR/data:/data" --entrypoint ls reporter -la /data
 
-  *)
-    echo "Usage: $0 {build_generator|run_generator|create_local_data|build_reporter|run_reporter|report_server|structure|clear_data|inside_generator|inside_reporter}"
-    exit 1
-    ;;
-esac
+elif [ "$1" = "report_server" ]; then
+  mkdir -p data
+  MSYS_NO_PATHCONV=1 docker run --rm -p 8080:80 -v "$HOST_DIR/data:/usr/share/nginx/html:ro" nginx:alpine
+
+else
+  exit 1
+fi
